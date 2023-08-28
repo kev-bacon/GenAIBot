@@ -44,6 +44,7 @@ from htmlTemplates import css, bot_template, user_template
 #     return index_name
 
 
+
 #  puts all pdf text into a variable and returns it, pretty chill  
 def get_pdf_text(pdf_docs):
     text = ""
@@ -113,7 +114,9 @@ def main():
 
     st.header("Chat with multiple PDFs :books:")
     user_question = st.text_input("Ask a question about your documents:")
-    if user_question:
+    if user_question and st.session_state.conversation is None:
+        st.write(bot_template.replace("{{MSG}}","I do not have enough context, please upload a relevant PDF for me to learn"), unsafe_allow_html=True) 
+    elif user_question: 
         handle_userinput(user_question)
 
     with st.sidebar:

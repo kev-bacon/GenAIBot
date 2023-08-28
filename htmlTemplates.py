@@ -28,7 +28,7 @@ css = '''
 bot_template = '''
 <div class="chat-message bot">
     <div class="avatar">
-        <img src="accenture_logo.jpg" style="max-height: 78px; max-width: 78px; border-radius: 50%; object-fit: cover;">
+        <img src="https://i.ibb.co/WsqwChJ/accenture-logo.jpg"> 
     </div>
     <div class="message">{{MSG}}</div>
 </div>
@@ -37,8 +37,11 @@ bot_template = '''
 user_template = '''
 <div class="chat-message user">
     <div class="avatar">
-        <img src="default.png">
+        <img src="https://i.ibb.co/CQ50xgd/default.png">
     </div>    
     <div class="message">{{MSG}}</div>
 </div>
 '''
+
+
+#style="max-height: 78px; max-width: 78px; border-radius: 50%; object-fit: cover;">
