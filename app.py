@@ -74,8 +74,8 @@ def pptx_to_text(documents):
     text = ''
     for eachfile in documents:
         prs = Presentation(eachfile)
-        print(eachfile)
-        print("----------------------")
+        # print(eachfile)
+        # print("----------------------")
         for slide in prs.slides:
             for shape in slide.shapes:
                 if hasattr(shape, "text"):
@@ -85,18 +85,18 @@ def pptx_to_text(documents):
 
 def all_files(documents):
     text = ''
-    print('ALL_FILES', text)
+    # print('ALL_FILES', text)
     for eachfile in documents:
-        print('eachfile',eachfile.name)
+        # print('eachfile',eachfile.name)
         if eachfile.name.endswith('.csv'):
             text += csv_to_pd([eachfile])
-            print(eachfile.name + '  here')
+            # print(eachfile.name + '  here')
         elif eachfile.name.endswith('.pdf'):
             text += get_pdf_text([eachfile])
-            print(eachfile.name + '  here')
+            # print(eachfile.name + '  here')
         elif eachfile.name.endswith('.pptx'):
             text += pptx_to_text([eachfile])
-            print(eachfile.name + '  here')
+            # print(eachfile.name + '  here')
     return(text)
 
 #uses langchain function to split text -> so that it can be used for embedding
@@ -166,11 +166,6 @@ def main():
 
     with st.sidebar:
         st.subheader("Created by the 3 musketeers (kevin.b.nguyen, callum.linnegan, arushi.tejpal)")
-        option = st.selectbox(
-        'Which LLM would you like to use',
-        ('GPT-3.5', 'Llama 2.0', 'PaLM'))
-
-        st.write('You selected:', option)
         documents = st.file_uploader(
             "Upload your files here and click on 'Process'", accept_multiple_files=True)
         #print(documents)
@@ -188,7 +183,29 @@ def main():
                 # create conversation chain
                 st.session_state.conversation = get_conversation_chain(
                     vectorstore)
+        LLM_List = ('GPT-3.5', 'Llama 2.0', 'PaLM')
+        option = st.selectbox(
+        'Which LLM would you like to use',
+        LLM_List)
+        if option in LLM_List:
+            add_slider = st.sidebar.slider(
+                'Temperature',
+                0.0, 1.0, 0.8, 0.05
+                )
+        if option == 'GPT-3.5':
+            add_slider = st.sidebar.slider(
+                'Top P',
+                0.0, 1.0, 1.0, 0.05
+                )
+            add_slider = st.sidebar.slider(
+                'Frequency Penalty',
+                0.0, 1.0, 0.0, 0.05
+                )
+
+        st.write('You selected:', option)
+        
 
 
 if __name__ == '__main__':
     main()
+

@@ -5,9 +5,11 @@ css = '''
 }
 .chat-message.user {
     background-color: #2b313e
+    flex-direction: row
 }
 .chat-message.bot {
     background-color: #475063
+    flex-direction: row-reverse
 }
 .chat-message .avatar {
   width: 20%;
@@ -36,12 +38,10 @@ bot_template = '''
 
 user_template = '''
 <div class="chat-message user">
+    <div class="message">{{MSG}}</div>
     <div class="avatar">
         <img src="https://i.ibb.co/CQ50xgd/default.png">
     </div>    
-    <div class="message">{{MSG}}</div>
 </div>
 '''
 
-
-#style="max-height: 78px; max-width: 78px; border-radius: 50%; object-fit: cover;">
