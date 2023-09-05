@@ -149,7 +149,8 @@ def handle_userinput(user_question):
 def main():
     load_dotenv()
     st.set_page_config(page_title="Chat with multiple PDFs",
-                       page_icon=":books:")
+                       page_icon=":books:",
+                       layout="wide")
     st.write(css, unsafe_allow_html=True)
 
     if "conversation" not in st.session_state:
@@ -171,7 +172,6 @@ def main():
         #print(documents)
         if st.button("Process"):
             with st.spinner("Processing"):    ##Show that it is running/not frozen \
-                print('Documents Here:', documents)
                 raw_text = all_files(documents)
 
                 # get the text chunks
@@ -183,6 +183,7 @@ def main():
                 # create conversation chain
                 st.session_state.conversation = get_conversation_chain(
                     vectorstore)
+            st.success("Files finished processing", icon="✅")
         LLM_List = ('GPT-3.5', 'Llama 2.0', 'PaLM')
         option = st.selectbox(
         'Which LLM would you like to use',
