@@ -8,6 +8,7 @@ altair==4
 tiktoken==0.4.0
 huggingface-hub==0.14.1
 pinecone-client
+python-pptx
 
 InstructorEmbedding==1.0.1
 sentence-transformers==2.2.2

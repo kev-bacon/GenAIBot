@@ -15,7 +15,6 @@ from htmlTemplates import css, bot_template, user_template
 # from langchain.vectorstores import Pinecone
 import os
 import pandas as pd
-import glob
 from pptx import Presentation
 
 
@@ -35,10 +34,9 @@ from pptx import Presentation
 #     return index_name
 
 # def init_pinecone():
-#     env_file_loader = load_dotenv(find_dotenv())
 #     pinecone.init(
-#         api_key=os.environ['PINECONE_API_KEY'],  # find at app.pinecone.io
-#         environment=os.environ['PINECONE_ENV'],  # next to api key in console
+#         api_key='PINECONE_API_KEY',  # find at app.pinecone.io
+#         environment='PINECONE_ENV'  # next to api key in console
 #     )
 #     index_name = "dackai"
 #     if index_name not in pinecone.list_indexes():
@@ -86,16 +84,18 @@ def pptx_to_text(documents):
     return text
 
 def all_files(documents):
-    print(documents)
+    text = ''
+    print('ALL_FILES', text)
     for eachfile in documents:
+        print('eachfile',eachfile.name)
         if eachfile.name.endswith('.csv'):
-            text = csv_to_pd(documents)
+            text += csv_to_pd([eachfile])
             print(eachfile.name + '  here')
         elif eachfile.name.endswith('.pdf'):
-            text = get_pdf_text(documents)
+            text += get_pdf_text([eachfile])
             print(eachfile.name + '  here')
         elif eachfile.name.endswith('.pptx'):
-            text = pptx_to_text(documents)
+            text += pptx_to_text([eachfile])
             print(eachfile.name + '  here')
     return(text)
 
@@ -103,8 +103,8 @@ def all_files(documents):
 def get_text_chunks(documents):
     text_splitter = CharacterTextSplitter(
         separator="\n",
-        chunk_size=5000,
-        chunk_overlap=500,
+        chunk_size=1000,
+        chunk_overlap=200,
         length_function=len
     )
     chunks = text_splitter.split_text(documents)
@@ -156,9 +156,9 @@ def main():
         st.session_state.conversation = None
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
-
-    st.header("Chat with multiple PDFs :books:")
-    user_question = st.text_input("Ask a question about your documents:")
+    st.image("https://1000logos.net/wp-content/uploads/2021/04/Accenture-logo-500x281.png", width=100)
+    st.header("Ask questions about your documents")
+    user_question = st.text_input("Type your question below:")
     if user_question and st.session_state.conversation is None:
         st.write(bot_template.replace("{{MSG}}","I do not have enough context, please upload a relevant PDF for me to learn"), unsafe_allow_html=True) 
     elif user_question: 
@@ -166,24 +166,13 @@ def main():
 
     with st.sidebar:
         st.subheader("Created by the 3 musketeers (kevin.b.nguyen, callum.linnegan, arushi.tejpal)")
-        file_type = st.radio(
-            "What file type would you like to upload?",
-            ["PDF","CSV","PPTX","all"]
-        )
         documents = st.file_uploader(
             "Upload your files here and click on 'Process'", accept_multiple_files=True)
         #print(documents)
         if st.button("Process"):
-            with st.spinner("Processing"):    ##Show that it is running/not frozen 
-                # get pdf text
-                # if file_type == 'PDF':
-                #     raw_text = get_pdf_text(documents)
-                # elif file_type == 'CSV':
-                #     raw_text = csv_to_pd(documents)
-                # elif file_type == 'PPTX':
-                #     raw_text = pptx_to_text(documents)
-                if file_type == 'all':
-                    raw_text = all_files(documents)
+            with st.spinner("Processing"):    ##Show that it is running/not frozen \
+                print('Documents Here:', documents)
+                raw_text = all_files(documents)
 
                 # get the text chunks
                 text_chunks = get_text_chunks(raw_text)
