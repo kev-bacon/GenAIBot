@@ -166,6 +166,11 @@ def main():
 
     with st.sidebar:
         st.subheader("Created by the 3 musketeers (kevin.b.nguyen, callum.linnegan, arushi.tejpal)")
+        option = st.selectbox(
+        'Which LLM would you like to use',
+        ('GPT-3.5', 'Llama 2.0', 'PaLM'))
+
+        st.write('You selected:', option)
         documents = st.file_uploader(
             "Upload your files here and click on 'Process'", accept_multiple_files=True)
         #print(documents)
