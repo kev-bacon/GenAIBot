@@ -3,54 +3,20 @@ from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings
-# , HuggingFaceInstructEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
-# from langchain.llms import HuggingFaceHub
-# from langchain.document_loaders import TextLoader
-# import pinecone 
-# from langchain.vectorstores import Pinecone
 import os
 import pandas as pd
 from pptx import Presentation
-
-
-
-# ##CHAT GPT HAS TO be 1536 embedding dimensions, must check for Google
-# def init_pinecone(): 
-#     pinecone.init(
-#         api_key=os.getenv("PINECONE_API_KEY"),  # find at app.pinecone.io
-#         environment=os.getenv("PINECONE_ENV"),  # next to api key in console
-#     )
-#     index_name = "dackai"
-#     if index_name not in pinecone.list_indexes(): 
-#         pinecone.create_index(name=index_name, dimension=1536, metric="cosine")
-#         print(f"create a new index {index_name}")
-#     else:
-#         print(f"{index_name} index exist. don't create this again")
-#     return index_name
-
-# def init_pinecone():
-#     pinecone.init(
-#         api_key='PINECONE_API_KEY',  # find at app.pinecone.io
-#         environment='PINECONE_ENV'  # next to api key in console
-#     )
-#     index_name = "dackai"
-#     if index_name not in pinecone.list_indexes():
-#         pinecone.create_index(name=index_name, dimension=1536, metric="cosine")
-#         print(f"create a new index {index_name}")
-#     else:
-#         print(f"{index_name} index exist. don't create this again")
-#     return index_name
-
+from langchain.document_loaders import WebBaseLoader
+import urllib3
 
 
 #  puts all pdf text into a variable and returns it, pretty chill  
 def get_pdf_text(pdf_docs):
-    print(pdf_docs)
     text = ""
     for pdf in pdf_docs:
         print(pdf)
@@ -74,29 +40,23 @@ def pptx_to_text(documents):
     text = ''
     for eachfile in documents:
         prs = Presentation(eachfile)
-        # print(eachfile)
-        # print("----------------------")
         for slide in prs.slides:
             for shape in slide.shapes:
                 if hasattr(shape, "text"):
-                    print(shape.text)
                     text += shape.text
     return text
 
-def all_files(documents):
+def all_files(documents, url = False):
     text = ''
-    # print('ALL_FILES', text)
     for eachfile in documents:
-        # print('eachfile',eachfile.name)
         if eachfile.name.endswith('.csv'):
             text += csv_to_pd([eachfile])
-            # print(eachfile.name + '  here')
         elif eachfile.name.endswith('.pdf'):
             text += get_pdf_text([eachfile])
-            # print(eachfile.name + '  here')
         elif eachfile.name.endswith('.pptx'):
             text += pptx_to_text([eachfile])
-            # print(eachfile.name + '  here')
+    if url: 
+        text += url[0].page_content
     return(text)
 
 #uses langchain function to split text -> so that it can be used for embedding
@@ -146,6 +106,13 @@ def handle_userinput(user_question):
                 "{{MSG}}", message.content), unsafe_allow_html=True)
 
 
+
+# for k, v in url[0].metadata.items():
+#     print(f"{k} : {v}")
+
+
+
+
 def main():
     load_dotenv()
     st.set_page_config(page_title="Chat with multiple PDFs",
@@ -166,13 +133,22 @@ def main():
         handle_userinput(user_question)
 
     with st.sidebar:
-        st.subheader("Created by the 3 musketeers (kevin.b.nguyen, callum.linnegan, arushi.tejpal)")
+        st.subheader("Created by kevin.b.nguyen, callum.linnegan, arushi.tejpal")
         documents = st.file_uploader(
             "Upload your files here and click on 'Process'", accept_multiple_files=True)
-        #print(documents)
+        urllib3.disable_warnings()
+        url = st.text_input('URL link') 
+        loaded_url = False
+
         if st.button("Process"):
             with st.spinner("Processing"):    ##Show that it is running/not frozen \
-                raw_text = all_files(documents)
+                if url: 
+                    
+                    loader = WebBaseLoader(url)
+                    loader.requests_kwargs = {'verify':False}
+                    loaded_url = loader.load()
+                
+                raw_text = all_files(documents, loaded_url)
 
                 # get the text chunks
                 text_chunks = get_text_chunks(raw_text)
