@@ -8,11 +8,11 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
+from sentence_transformers import SentenceTransformer
+from langchain.embeddings import HuggingFaceEmbeddings 
 import os
 import pandas as pd
 from pptx import Presentation
-from langchain.document_loaders import WebBaseLoader
-import urllib3
 
 
 #  puts all pdf text into a variable and returns it, pretty chill  
@@ -46,7 +46,7 @@ def pptx_to_text(documents):
                     text += shape.text
     return text
 
-def all_files(documents, url = False):
+def all_files(documents):
     text = ''
     for eachfile in documents:
         if eachfile.name.endswith('.csv'):
@@ -55,23 +55,21 @@ def all_files(documents, url = False):
             text += get_pdf_text([eachfile])
         elif eachfile.name.endswith('.pptx'):
             text += pptx_to_text([eachfile])
-    if url: 
-        text += url[0].page_content
     return(text)
 
 #uses langchain function to split text -> so that it can be used for embedding
 def get_text_chunks(documents):
     text_splitter = CharacterTextSplitter(
         separator="\n",
-        chunk_size=1000,
-        chunk_overlap=200,
+        chunk_size=2000,
+        chunk_overlap=500,
         length_function=len
     )
     chunks = text_splitter.split_text(documents)
     return chunks
 
 def get_vectorstore(text_chunks):
-    embeddings = OpenAIEmbeddings()
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     # embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl") #can switch to instructor if stronger GPU, but im broke 
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     # index_name = init_pinecone()
@@ -106,17 +104,9 @@ def handle_userinput(user_question):
                 "{{MSG}}", message.content), unsafe_allow_html=True)
 
 
-
-# for k, v in url[0].metadata.items():
-#     print(f"{k} : {v}")
-
-
-
-
 def main():
     load_dotenv()
     st.set_page_config(page_title="Chat with multiple PDFs",
-                       page_icon=":books:",
                        layout="wide")
     st.write(css, unsafe_allow_html=True)
 
@@ -133,22 +123,21 @@ def main():
         handle_userinput(user_question)
 
     with st.sidebar:
-        st.subheader("Created by kevin.b.nguyen, callum.linnegan, arushi.tejpal")
+        # st.subheader("Created by kevin.b.nguyen, callum.linnegan, arushi.tejpal")
         documents = st.file_uploader(
             "Upload your files here and click on 'Process'", accept_multiple_files=True)
-        urllib3.disable_warnings()
-        url = st.text_input('URL link') 
-        loaded_url = False
+        # urllib3.disable_warnings()
+        # url = st.text_input('URL link') 
+        # loaded_url = False
 
         if st.button("Process"):
             with st.spinner("Processing"):    ##Show that it is running/not frozen \
-                if url: 
-                    
-                    loader = WebBaseLoader(url)
-                    loader.requests_kwargs = {'verify':False}
-                    loaded_url = loader.load()
+                # if url: 
+                #     loader = WebBaseLoader(url)
+                #     loader.requests_kwargs = {'verify':False}
+                #     loaded_url = loader.load()
                 
-                raw_text = all_files(documents, loaded_url)
+                raw_text = all_files(documents)
 
                 # get the text chunks
                 text_chunks = get_text_chunks(raw_text)
