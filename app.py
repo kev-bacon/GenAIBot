@@ -15,6 +15,11 @@ import pandas as pd
 from pptx import Presentation
 
 
+## TO DO, PROMPT with CONTEXT: How many documents, name of documents, what the bot is meant todo 
+## FLIP updated text to be at the top - TIMESTAMP 
+## PROMPT for formatting, use library for markdown
+## React/Angular for front end 
+##LOOK AT ASPIRE in KX - GRABS INFO FROM SHAREPOINT 
 #  puts all pdf text into a variable and returns it, pretty chill  
 def get_pdf_text(pdf_docs):
     text = ""
@@ -69,7 +74,8 @@ def get_text_chunks(documents):
     return chunks
 
 def get_vectorstore(text_chunks):
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    # embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embeddings = OpenAIEmbeddings() 
     # embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl") #can switch to instructor if stronger GPU, but im broke 
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     # index_name = init_pinecone()
