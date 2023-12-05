@@ -1,4 +1,5 @@
 import streamlit as st
+import random
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
@@ -13,14 +14,18 @@ from langchain.embeddings import HuggingFaceEmbeddings
 import os
 import pandas as pd
 from pptx import Presentation
+from langchain.prompts import PromptTemplate
+from langchain.schema.messages import SystemMessage
 
 
-## TO DO, PROMPT with CONTEXT: How many documents, name of documents, what the bot is meant todo 
-## FLIP updated text to be at the top - TIMESTAMP 
-## PROMPT for formatting, use library for markdown
-## React/Angular for front end 
-##LOOK AT ASPIRE in KX - GRABS INFO FROM SHAREPOINT 
-#  puts all pdf text into a variable and returns it, pretty chill  
+
+# custom_template = """Given the following conversation and I want you to summarise the patient disease, and then identify the ICD Code that relates to this patient disease. And show me the patient procedure based on the ICD Code. If you do not know the answer reply with 'I am sorry'.
+#     Chat History:
+#     {chat_history}
+#     Follow Up Input: {user_question}
+#     """
+
+
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
@@ -84,9 +89,8 @@ def get_vectorstore(text_chunks):
 
 
 def get_conversation_chain(vectorstore):
-    llm = ChatOpenAI()
+    llm = ChatOpenAI(temperature=0, model="gpt-4")
     # llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
-
     memory = ConversationBufferMemory(
         memory_key='chat_history', return_messages=True)
     conversation_chain = ConversationalRetrievalChain.from_llm(
@@ -102,9 +106,10 @@ def handle_userinput(user_question):
     st.session_state.chat_history = response['chat_history']
 
     for i, message in enumerate(st.session_state.chat_history):
+        random_num = random.randint(70, 95)
         if i % 2 == 0:
             st.write(user_template.replace(
-                "{{MSG}}", message.content), unsafe_allow_html=True)
+                "{{MSG}}", message.content), random_num, unsafe_allow_html=True)
         else:
             st.write(bot_template.replace(
                 "{{MSG}}", message.content), unsafe_allow_html=True)
@@ -129,53 +134,19 @@ def main():
         handle_userinput(user_question)
 
     with st.sidebar:
-        # st.subheader("Created by kevin.b.nguyen, callum.linnegan, arushi.tejpal")
         documents = st.file_uploader(
             "Upload your files here and click on 'Process'", accept_multiple_files=True)
-        # urllib3.disable_warnings()
-        # url = st.text_input('URL link') 
-        # loaded_url = False
 
         if st.button("Process"):
-            with st.spinner("Processing"):    ##Show that it is running/not frozen \
-                # if url: 
-                #     loader = WebBaseLoader(url)
-                #     loader.requests_kwargs = {'verify':False}
-                #     loaded_url = loader.load()
-                
+            with st.spinner("Processing"):    
                 raw_text = all_files(documents)
-
                 # get the text chunks
                 text_chunks = get_text_chunks(raw_text)
-
                 # create vector store
                 vectorstore = get_vectorstore(text_chunks)
-
                 # create conversation chain
-                st.session_state.conversation = get_conversation_chain(
-                    vectorstore)
+                st.session_state.conversation = get_conversation_chain(vectorstore)
             st.success("Files finished processing", icon="✅")
-        LLM_List = ('GPT-3.5', 'Llama 2.0', 'PaLM')
-        option = st.selectbox(
-        'Which LLM would you like to use',
-        LLM_List)
-        if option in LLM_List:
-            add_slider = st.sidebar.slider(
-                'Temperature',
-                0.0, 1.0, 0.8, 0.05
-                )
-        if option == 'GPT-3.5':
-            add_slider = st.sidebar.slider(
-                'Top P',
-                0.0, 1.0, 1.0, 0.05
-                )
-            add_slider = st.sidebar.slider(
-                'Frequency Penalty',
-                0.0, 1.0, 0.0, 0.05
-                )
-
-        st.write('You selected:', option)
-        
 
 
 if __name__ == '__main__':
