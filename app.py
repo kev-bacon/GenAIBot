@@ -1,23 +1,28 @@
+# import sys 
+# from langchain.embeddings import OpenAIEmbeddings
+# from langchain.chat_models import ChatOpenAI
+# from langchain.vectorstores import FAISS
+from langchain_community.chat_models import ChatOpenAI
+from langchain_community.vectorstores import FAISS 
+from langchain_community.embeddings import OpenAIEmbeddings
+
 import streamlit as st
 import random
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
-from sentence_transformers import SentenceTransformer
-from langchain.embeddings import HuggingFaceEmbeddings 
 import os
 import pandas as pd
 from pptx import Presentation
-from langchain.prompts import PromptTemplate
-from langchain.schema.messages import SystemMessage
+# from langchain.prompts import PromptTemplate
+# from langchain.schema.messages import SystemMessage
+# from sentence_transformers import SentenceTransformer
+# from langchain.embeddings import HuggingFaceEmbeddings 
 
-
+# print(sys.path)
 
 # custom_template = """Given the following conversation and I want you to summarise the patient disease, and then identify the ICD Code that relates to this patient disease. And show me the patient procedure based on the ICD Code. If you do not know the answer reply with 'I am sorry'.
 #     Chat History:
@@ -29,7 +34,7 @@ from langchain.schema.messages import SystemMessage
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
-        print(pdf)
+        # print(pdf)
         pdf_reader = PdfReader(pdf)
         for page in pdf_reader.pages:
             text += page.extract_text()
@@ -106,10 +111,9 @@ def handle_userinput(user_question):
     st.session_state.chat_history = response['chat_history']
 
     for i, message in enumerate(st.session_state.chat_history):
-        random_num = random.randint(70, 95)
         if i % 2 == 0:
             st.write(user_template.replace(
-                "{{MSG}}", message.content), random_num, unsafe_allow_html=True)
+                "{{MSG}}", message.content), unsafe_allow_html=True)
         else:
             st.write(bot_template.replace(
                 "{{MSG}}", message.content), unsafe_allow_html=True)
