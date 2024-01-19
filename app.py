@@ -2,14 +2,14 @@
 # from langchain.embeddings import OpenAIEmbeddings
 # from langchain.chat_models import ChatOpenAI
 # from langchain.vectorstores import FAISS
-from langchain_community.chat_models import ChatOpenAI
+from langchain_openai.chat_models import ChatOpenAI
 from langchain_community.vectorstores import FAISS 
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai.embeddings import OpenAIEmbeddings
 
 import streamlit as st
 import random
 from dotenv import load_dotenv
-from PyPDF2 import PdfReader
+import pypdfium2 as pdfium
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
@@ -33,11 +33,20 @@ from pptx import Presentation
 
 def get_pdf_text(pdf_docs):
     text = ""
-    for pdf in pdf_docs:
-        # print(pdf)
-        pdf_reader = PdfReader(pdf)
-        for page in pdf_reader.pages:
-            text += page.extract_text()
+    for doc_index, pdf in enumerate(pdf_docs):
+        # print(f"\033[93mReading PDF Document {doc_index + 1}/{len(pdf_docs)}\033[0m")
+        pdf_reader = pdfium.PdfDocument(pdf) 
+        num_pages = len(pdf_reader)
+        # print(f"\033[94mNumber of pages in document: {num_pages}\033[0m")
+
+        for i in range(num_pages):
+            # print(f"\033[92mProcessing Page {i + 1}/{num_pages}...\033[0m")
+            page = pdf_reader.get_page(i)
+            textpage = page.get_textpage()
+            page_text = textpage.get_text_range()
+            text += page_text + "\n"
+
+    # print("\033[91mPDF_TEXT IS =\033[0m", text)
     return text
 
 def csv_to_pd(documents):
@@ -74,12 +83,7 @@ def all_files(documents):
 
 #uses langchain function to split text -> so that it can be used for embedding
 def get_text_chunks(documents):
-    text_splitter = CharacterTextSplitter(
-        separator="\n",
-        chunk_size=2000,
-        chunk_overlap=500,
-        length_function=len
-    )
+    text_splitter = CharacterTextSplitter(separator="\n", chunk_size=5000, chunk_overlap=500, length_function=len)
     chunks = text_splitter.split_text(documents)
     return chunks
 
@@ -106,51 +110,65 @@ def get_conversation_chain(vectorstore):
     return conversation_chain
 
 
-def handle_userinput(user_question):
-    response = st.session_state.conversation({'question': user_question})
-    st.session_state.chat_history = response['chat_history']
+def save_question_and_clear_prompt(ss):
+    ss.user_question = ss.prompt_bar
+    ss.prompt_bar = ""  # clearing the prompt bar after clicking enter to prevent automatic re-submissions
 
-    for i, message in enumerate(st.session_state.chat_history):
-        if i % 2 == 0:
-            st.write(user_template.replace(
-                "{{MSG}}", message.content), unsafe_allow_html=True)
-        else:
-            st.write(bot_template.replace(
-                "{{MSG}}", message.content), unsafe_allow_html=True)
+
+def write_chat(msgs):
+    # Write the Q&A in a pretty chat format
+    for i, msg in enumerate(msgs):
+        if i % 2 == 0:  # it's a question
+            st.markdown(user_template.replace("{{MSG}}", msg.content), unsafe_allow_html=True)
+        else:  # it's an answer
+            st.markdown(bot_template.replace("{{MSG}}", msg.content), unsafe_allow_html=True)
+
 
 
 def main():
     load_dotenv()
+    ss = st.session_state
     st.set_page_config(page_title="Chat with multiple PDFs",
                        layout="wide")
     st.write(css, unsafe_allow_html=True)
-
-    if "conversation" not in st.session_state:
-        st.session_state.conversation = None
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = None
+    st.markdown(css, unsafe_allow_html=True)
     st.image("https://1000logos.net/wp-content/uploads/2021/04/Accenture-logo-500x281.png", width=100)
     st.header("Ask questions about your documents")
-    user_question = st.text_input("Type your question below:")
-    if user_question and st.session_state.conversation is None:
-        st.write(bot_template.replace("{{MSG}}","I do not have enough context, please upload a relevant PDF for me to learn"), unsafe_allow_html=True) 
-    elif user_question: 
-        handle_userinput(user_question)
+    
+    if "conversation_chain" not in ss:
+        ss.conversation_chain = None  # the main variable storing the llm, retriever and memory
+    if "prompt_bar" not in ss:
+        ss.prompt_bar = ""
+    if "user_question" not in ss:
+        ss.user_question = ""
+    if "docs_are_processed" not in ss:
+        ss.docs_are_processed = False
 
     with st.sidebar:
-        documents = st.file_uploader(
-            "Upload your files here and click on 'Process'", accept_multiple_files=True)
+        pdf_docs = st.file_uploader("Upload your PDFs here and click 'Process'", accept_multiple_files=True, type="pdf")
+        if st.button("Process") and pdf_docs:
+            with st.spinner("Processing"):
+                raw_text = get_pdf_text(pdf_docs)  # get pdf text
+                text_chunks = get_text_chunks(raw_text)  # get the text chunks
+                vectorstore = get_vectorstore(text_chunks)  # create vector store
+                ss.conversation_chain = get_conversation_chain(vectorstore)  # create conversation chain
+                ss.docs_are_processed = True
+            if ss.docs_are_processed:
+                st.success("Files finished processing", icon="✅")
+    st.text_input("Ask a question here:", key='prompt_bar', on_change=save_question_and_clear_prompt(ss))
 
-        if st.button("Process"):
-            with st.spinner("Processing"):    
-                raw_text = all_files(documents)
-                # get the text chunks
-                text_chunks = get_text_chunks(raw_text)
-                # create vector store
-                vectorstore = get_vectorstore(text_chunks)
-                # create conversation chain
-                st.session_state.conversation = get_conversation_chain(vectorstore)
-            st.success("Files finished processing", icon="✅")
+    if ss.user_question:
+        ss.conversation_chain({'question': ss.user_question})  # This is what gets the response from the LLM!
+        if hasattr(ss.conversation_chain.memory, 'chat_memory'):
+            chat = ss.conversation_chain.memory.chat_memory.messages
+            write_chat(chat)
+
+    if hasattr(ss.conversation_chain, 'memory'):  # There is memory if the documents have been processed
+        if hasattr(ss.conversation_chain.memory, 'chat_memory'):  # There is chat_memory if questions have been asked
+            if st.button("Forget conversation"):  # adding a button
+                ss.conversation_chain.memory.chat_memory.clear()  # clears the ConversationBufferMemory
+
+    # st.write(ss)  # use this when debugging for visualizing the session_state variables        
 
 
 if __name__ == '__main__':
